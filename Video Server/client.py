@@ -56,15 +56,20 @@ def exitt():
 
   
 def open_cam():
-   capture =cv2.VideoCapture(0)
-   while True:
-      ret,frame=capture.read()
-      gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-      cv2.imshow('frame',frame)
-      if cv2.waitKey(1) & 0xFF ==ord('q'):
-         break
-   capture.release()
-   cv2.destroyAllWindows()
+   try:
+      capture =cv2.VideoCapture(0)
+      while True:
+         ret,frame=capture.read()
+         frame = cv2.resize(frame, (960, 600))
+         cv2.imshow('frame',frame)
+         if cv2.waitKey(1) & 0xFF ==ord('q'):
+            break
+      capture.release()
+      cv2.destroyAllWindows()
+   except:
+     show_alert("Some thing goes wrong")
+     alert()
+   
   
 
 def stream_server():
@@ -82,8 +87,8 @@ def stream_server():
 
       while True:
          ret, frame = cam.read()
-         cv2.imshow('My Video',frame)
-         frame = imutils.resize(frame, width=720)
+         cv2.imshow('My Video',cv2.resize(frame, (960, 600)))
+         frame = imutils.resize(frame, width=1250)
          frame = cv2.flip(frame,180)
          result, image = cv2.imencode('.jpg', frame, encode_param)
          data = pickle.dumps(image, 0)
@@ -106,32 +111,38 @@ def stream_server():
    
    
 def join_to_theater():
-   conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-   conn.connect(('127.0.0.1', 8080))
+   try:
+      conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      conn.connect(('127.0.0.1', 8080))
 
-   data = b""
-   payload_size = struct.calcsize(">L")
-   print("payload_size: {}".format(payload_size))
-   while True:
-      while len(data) < payload_size:
-         data += conn.recv(4096)
-      # receive image row data form client socket
-      packed_msg_size = data[:payload_size]
-      data = data[payload_size:]
-      msg_size = struct.unpack(">L", packed_msg_size)[0]
-      while len(data) < msg_size:
-         data += conn.recv(4096)
-      frame_data = data[:msg_size]
-      data = data[msg_size:]
-      # unpack image using pickle 
-      frame=pickle.loads(frame_data, fix_imports=True, encoding="bytes")
-      frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
+      data = b""
+      payload_size = struct.calcsize(">L")
+      print("payload_size: {}".format(payload_size))
+      while True:
+         while len(data) < payload_size:
+            data += conn.recv(4096)
+         # receive image row data form client socket
+         packed_msg_size = data[:payload_size]
+         data = data[payload_size:]
+         msg_size = struct.unpack(">L", packed_msg_size)[0]
+         while len(data) < msg_size:
+            data += conn.recv(4096)
+         frame_data = data[:msg_size]
+         data = data[msg_size:]
+         # unpack image using pickle 
+         frame=pickle.loads(frame_data, fix_imports=True, encoding="bytes")
+         frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
 
-      cv2.imshow('server',frame)
-      if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-      cv2.waitKey(1)     
-   cv2.destroyAllWindows()
+         cv2.imshow('Theater',frame)
+         if cv2.waitKey(1) & 0xFF == ord('q'):
+               break
+         cv2.waitKey(1)  
+      conn.close()   
+      cv2.destroyAllWindows()
+   except:
+     show_alert("Some thing goes wrong")
+     alert()
+
    
 
 def show_alert(msg):

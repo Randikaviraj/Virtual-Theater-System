@@ -13,8 +13,11 @@ clint_lock=threading.Lock()
 
 
 def algorithm(frames):
-    if len(frames)!=0:
+    if len(frames)==1:
         return frames[0]
+    else:
+        return frames[1]
+        
     
 
 def client_request_handling(client_request_socket_list):
@@ -66,10 +69,9 @@ def theater_room(socket_list,client_request_socket_list):
             except:
               print('An exception occurred')    
         lock.release()
-        
+        print(len(frames))
         merged_frame=algorithm(frames=frames)
-        
-        merged_frame = imutils.resize(merged_frame, width=720)
+        merged_frame = imutils.resize(merged_frame, width=1250)
         merged_frame = cv2.flip(merged_frame,180)
         result, image = cv2.imencode('.jpg', merged_frame, encode_param)
         data = pickle.dumps(image, 0)
@@ -89,28 +91,33 @@ def theater_room(socket_list,client_request_socket_list):
             
         
         
+def streamer_request_handling(socket_list):
+    global HOST
+    port=8485
+    
+    s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    print('Socket created')
+    
+    s.bind((HOST,port))
+    print('Socket bind complete')
+    s.listen(10)
+    print('Stream Socket now listening')
+    while True:
+        conn,addr=s.accept()
+        lock.acquire()
+        socket_list.append(conn)
+        lock.release()
 
-
-
-s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-print('Socket created')
 
 socket_list=[]
 client_request_socket_list=[]
 
-s.bind((HOST,PORT))
-print('Socket bind complete')
-s.listen(10)
-print('Stream Socket now listening')
-
 threading.Thread(target=theater_room,args=(socket_list,client_request_socket_list,)).start()
 threading.Thread(target=client_request_handling,args=(client_request_socket_list,)).start()
+threading.Thread(target=streamer_request_handling,args=(socket_list,)).start()
 
 
-while True:
-  conn,addr=s.accept()
-  lock.acquire()
-  socket_list.append(conn)
-  lock.release()
+
+
 
 

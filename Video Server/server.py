@@ -37,16 +37,16 @@ def client_request_handling(client_request_socket_list):
 
 def theater_room(socket_list,client_request_socket_list):
     encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
-    data = b""
+    bg = cv2.imread("bg.jpeg", cv2.IMREAD_COLOR)
     payload_size = struct.calcsize(">L")
     print("payload_size: {}".format(payload_size))
     while True:
         frames=[]
-        bg = cv2.imread("bg.jpeg", cv2.IMREAD_COLOR)
         frames.append(bg)
         lock.acquire()
-        for conn in socket_list:
+        for i,(conn,data)  in enumerate(socket_list): 
             try:
+                
                 while len(data) < payload_size:
                     data += conn.recv(4096)
                 # receive image row data form client socket
@@ -57,19 +57,23 @@ def theater_room(socket_list,client_request_socket_list):
                     data += conn.recv(4096)
                 frame_data = data[:msg_size]
                 data = data[msg_size:]
+                socket_list[i]=(conn,data)
                 # unpack image using pickle 
                 frame=pickle.loads(frame_data, fix_imports=True, encoding="bytes")
                 frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
 
-                frames.append(frame)
                 # cv2.imshow('server',frame)
                 cv2.waitKey(1)
+                frames.append(frame)
+                
             except socket.error as msg:
-                socket_list.remove(conn)
+                print("Socket exception occurred")
+                socket_list.remove((conn,data))
             except:
-              print('An exception occurred')    
+                socket_list.remove((conn,data))
+                print('An exception occurred')    
+              
         lock.release()
-        print(len(frames))
         merged_frame=algorithm(frames=frames)
         merged_frame = imutils.resize(merged_frame, width=1250)
         merged_frame = cv2.flip(merged_frame,180)
@@ -94,27 +98,25 @@ def theater_room(socket_list,client_request_socket_list):
 def streamer_request_handling(socket_list):
     global HOST
     port=8485
-    
-    s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    print('Socket created')
-    
+    s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) 
     s.bind((HOST,port))
-    print('Socket bind complete')
+
     s.listen(10)
     print('Stream Socket now listening')
     while True:
         conn,addr=s.accept()
         lock.acquire()
-        socket_list.append(conn)
+        socket_list.append((conn,b"" ))
         lock.release()
 
 
 socket_list=[]
 client_request_socket_list=[]
 
+threading.Thread(target=streamer_request_handling,args=(socket_list,)).start()
 threading.Thread(target=theater_room,args=(socket_list,client_request_socket_list,)).start()
 threading.Thread(target=client_request_handling,args=(client_request_socket_list,)).start()
-threading.Thread(target=streamer_request_handling,args=(socket_list,)).start()
+
 
 
 

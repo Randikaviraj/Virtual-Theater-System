@@ -56,6 +56,7 @@ def exitt():
 
   
 def open_cam():
+   capture=None
    try:
       capture =cv2.VideoCapture(0)
       while True:
@@ -67,18 +68,23 @@ def open_cam():
       capture.release()
       cv2.destroyAllWindows()
    except:
+     if capture!=None:
+        capture.release()
+     cv2.destroyAllWindows()
      show_alert("Some thing goes wrong")
      alert()
    
   
 
 def stream_server():
+   client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   cam=None
    try:
-      client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      
       client_socket.connect(('127.0.0.1', 8485))
 
       cam = cv2.VideoCapture(0)
-      img_counter = 0
+
 
       #encode to jpeg format
       #encode param image quality 0 to 100. default:95
@@ -94,10 +100,8 @@ def stream_server():
          data = pickle.dumps(image, 0)
          size = len(data)
 
-         if img_counter%10==0:
-            client_socket.sendall(struct.pack(">L", size) + data)
-            
-         img_counter += 1
+
+         client_socket.sendall(struct.pack(">L", size) + data)
          
          if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -105,14 +109,18 @@ def stream_server():
       cam.release()
       cv2.destroyAllWindows()
    except:
+     client_socket.close()
+     if cam!=None:
+      cam.release()
+     cv2.destroyAllWindows()
      show_alert("Some thing goes wrong")
      alert()
    
    
    
 def join_to_theater():
+   conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
    try:
-      conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       conn.connect(('127.0.0.1', 8080))
 
       data = b""
@@ -136,10 +144,12 @@ def join_to_theater():
          cv2.imshow('Theater',frame)
          if cv2.waitKey(1) & 0xFF == ord('q'):
                break
-         cv2.waitKey(1)  
+         # cv2.waitKey(1)  
       conn.close()   
       cv2.destroyAllWindows()
    except:
+     conn.close()   
+     cv2.destroyAllWindows()
      show_alert("Some thing goes wrong")
      alert()
 

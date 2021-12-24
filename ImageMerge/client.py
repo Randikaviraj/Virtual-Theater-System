@@ -80,7 +80,7 @@ def nothing ():
     pass  
 
 def stream_server():
-
+   global entry
 
    #image = cv2.imread("bg12.jpg")
    cv2.namedWindow("Trackbars")
@@ -99,8 +99,11 @@ def stream_server():
    try:
       
       client_socket.connect(('127.0.0.1', 8485))
+      ip=entry.get()
+      entry.select_clear()
+      cam = cv2.VideoCapture('http://'+ip+':4747/video')
 
-      cam = cv2.VideoCapture(0)
+      #cam = cv2.VideoCapture(0)
       bg = cv2.imread("bg.jpeg")
       bg = cv2.resize(bg, (600, 450))
       
@@ -219,12 +222,14 @@ def alert():
    
 
 
+entry= Entry(frame, width= 30,bg='white',bd =5,fg='green')
+entry.focus_set()
+entry.place(x=100,y=140)
    
-but1=Button(frame,padx=5,pady=5,width=39,bg='white',fg='black',relief=GROOVE,command=open_cam,text='Open Cam',font=('helvetica 15 bold'))
+but1=Button(frame,padx=5,pady=5,width=39,bg='white',fg='black',relief=GROOVE,command=open_cam,text='Open Cam ',font=('helvetica 15 bold'))
 but1.place(x=5,y=176)
 
-
-but3=Button(frame,padx=5,pady=5,width=39,bg='white',fg='black',relief=GROOVE,command=stream_server,text='Open Cam & Stream',font=('helvetica 15 bold'))
+but3=Button(frame,padx=5,pady=5,width=39,bg='white',fg='black',relief=GROOVE,command=stream_server,text='Open Droid web Cam & Stream',font=('helvetica 15 bold'))
 but3.place(x=5,y=250)
 
 but4=Button(frame,padx=5,pady=5,width=39,bg='white',fg='black',relief=GROOVE,command=join_to_theater,text='Join to Theater',font=('helvetica 15 bold'))

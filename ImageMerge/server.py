@@ -19,19 +19,11 @@ def algorithm(frames):
     if len(frames)==2:
         return frames[1]
     if len(frames)==3:
-        #return frames[1]
-
-        #f1 = frame[1] - res1 
-        #f2 = frame2 - res2
-        #cv2.imshow("fpre", f2)
-        #frame1=frame[1]
-        #frame2=frame[2]
-        #bg =frame[0]
         ff = np.where(frames[1] == 0, frames[2], frames[1])
         fff = np.where(ff == 0, frames[0], ff)
         return fff
     else :
-	pass
+	    pass
         
     
 
@@ -63,13 +55,19 @@ def theater_room(socket_list,client_request_socket_list):
             try:
                 
                 while len(data) < payload_size:
-                    data += conn.recv(4096)
+                    chunk=conn.recv(4096)
+                    if chunk == b'':
+                        raise RuntimeError("socket connection broken")
+                    data += chunk
                 # receive image row data form client socket
                 packed_msg_size = data[:payload_size]
                 data = data[payload_size:]
                 msg_size = struct.unpack(">L", packed_msg_size)[0]
                 while len(data) < msg_size:
-                    data += conn.recv(4096)
+                    chunk=conn.recv(4096)
+                    if chunk == b'':
+                        raise RuntimeError("socket connection broken")
+                    data += chunk
                 frame_data = data[:msg_size]
                 data = data[msg_size:]
                 socket_list[i]=(conn,data)

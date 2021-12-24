@@ -101,6 +101,8 @@ def stream_server():
       client_socket.connect(('127.0.0.1', 8485))
 
       cam = cv2.VideoCapture(0)
+      bg = cv2.imread("bg.jpeg")
+      bg = cv2.resize(bg, (600, 450))
       
 
       #encode to jpeg format
@@ -135,8 +137,8 @@ def stream_server():
          res = cv2.bitwise_and(frame, frame, mask = mask)
 
          frame1 = frame - res
-         #frame_test = numpy.where(frame1 == 0, image, frame1)
-         cv2.imshow("frametest", frame1)
+         frame_test = numpy.where(frame1 == 0, bg, frame1)
+         cv2.imshow("frametest", frame_test)
 
          #cv2.imshow('My Video',cv2.resize(frame1, (600, 450)))
 

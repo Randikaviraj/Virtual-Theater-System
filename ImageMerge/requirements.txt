@@ -1,0 +1,5 @@
+python-dotenv
+opencv-python
+imutils
+numpy
+vidstream

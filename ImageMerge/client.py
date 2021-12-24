@@ -58,31 +58,94 @@ def exitt():
 
   
 def open_cam():
-   capture=None
+   global entry
+   cv2.namedWindow("Trackbars")
+   cv2.resizeWindow("Trackbars",200,200)
+
+   cv2.createTrackbar("L-H","Trackbars",0,179,nothing)
+   cv2.createTrackbar("L-S","Trackbars",0,255,nothing)
+   cv2.createTrackbar("L-V","Trackbars",0,255,nothing)
+   cv2.createTrackbar("U-H","Trackbars",179,255,nothing)
+   cv2.createTrackbar("U-S","Trackbars",255,255,nothing)
+   cv2.createTrackbar("U-V","Trackbars",255,255,nothing)
+
+
+   client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   cam=None
+   
    try:
-      capture =cv2.VideoCapture(0)
+      
+      client_socket.connect(('127.0.0.1', 8485))
+      ip=entry.get()
+      entry.select_clear()
+      cam = cv2.VideoCapture('http://'+ip+':4747/video')
+      
+
+      #encode to jpeg format
+      #encode param image quality 0 to 100. default:95
+      #if you want to shrink data size, choose low image quality.
+      encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
+
+
       while True:
-         ret,frame=capture.read()
-         frame = cv2.resize(frame, (960, 600))
-         cv2.imshow('frame',frame)
-         if cv2.waitKey(1) & 0xFF ==ord('q'):
+         ret, frame = cam.read()
+
+         frame = cv2.resize(frame, (600, 450))
+         #image = cv2.resize(image, (600, 450))
+         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+         #hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+         L_H=cv2.getTrackbarPos("L-H","Trackbars")
+         L_S=cv2.getTrackbarPos("L-S","Trackbars")
+         L_V=cv2.getTrackbarPos("L-V","Trackbars")
+         U_H=cv2.getTrackbarPos("U-H","Trackbars")
+         U_S=cv2.getTrackbarPos("U-S","Trackbars")
+         U_V=cv2.getTrackbarPos("U-V","Trackbars")
+
+         u_green = numpy.array([U_H,U_S,U_V])
+         l_green = numpy.array([L_H,L_S,L_V])
+
+         mask = cv2.inRange(frame, l_green, u_green)
+
+         res = cv2.bitwise_and(frame, frame, mask = mask)
+
+         frame1 = frame - res
+
+         cv2.imshow('My Video',cv2.resize(frame1, (600, 450)))
+
+
+         frame = imutils.resize(frame1, width=1250)
+         frame = cv2.flip(frame,180)
+         result, image = cv2.imencode('.jpg', frame, encode_param)
+         data = pickle.dumps(image, 0)
+         size = len(data)
+
+
+         client_socket.sendall(struct.pack(">L", size) + data)
+         
+         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-      capture.release()
+
+      client_socket.close()
+      cam.release()
       cv2.destroyAllWindows()
    except:
-     if capture!=None:
-        capture.release()
+     client_socket.close()
+     if cam!=None:
+      cam.release()
      cv2.destroyAllWindows()
      show_alert("Some thing goes wrong")
      alert()
    
-def nothing ():
+def nothing (args):
     pass  
 
 def stream_server():
+
    global entry
 
    #image = cv2.imread("bg12.jpg")
+    
    cv2.namedWindow("Trackbars")
    cv2.resizeWindow("Trackbars",200,200)
 
@@ -113,7 +176,6 @@ def stream_server():
       #if you want to shrink data size, choose low image quality.
       encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
 
-      i=0
 
       while True:
          ret, frame = cam.read()
@@ -134,16 +196,16 @@ def stream_server():
          l_green = numpy.array([L_H,L_S,L_V])
 
          mask = cv2.inRange(frame, l_green, u_green)
-         
-         cv2.imshow("mask", mask)
 
          res = cv2.bitwise_and(frame, frame, mask = mask)
 
          frame1 = frame - res
+
          frame_test = numpy.where(frame1 == 0, bg, frame1)
          cv2.imshow("frametest", frame_test)
 
-         #cv2.imshow('My Video',cv2.resize(frame1, (600, 450)))
+
+         cv2.imshow('My Video',cv2.resize(frame1, (600, 450)))
 
 
          #frame = imutils.resize(frame1, width=1250)
@@ -158,8 +220,6 @@ def stream_server():
          if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-         print(i)
-         i+=1
       client_socket.close()
       cam.release()
       cv2.destroyAllWindows()
@@ -183,13 +243,19 @@ def join_to_theater():
       print("payload_size: {}".format(payload_size))
       while True:
          while len(data) < payload_size:
-            data += conn.recv(4096)
+            chunk=conn.recv(4096)
+            if chunk == b'':
+               raise RuntimeError("socket connection broken")
+            data += chunk
          # receive image row data form client socket
          packed_msg_size = data[:payload_size]
          data = data[payload_size:]
          msg_size = struct.unpack(">L", packed_msg_size)[0]
          while len(data) < msg_size:
-            data += conn.recv(4096)
+            chunk=conn.recv(4096)
+            if chunk == b'':
+               raise RuntimeError("socket connection broken")
+            data += chunk
          frame_data = data[:msg_size]
          data = data[msg_size:]
          # unpack image using pickle 
@@ -222,11 +288,14 @@ def alert():
    
 
 
+
+
 entry= Entry(frame, width= 30,bg='white',bd =5,fg='green')
 entry.focus_set()
 entry.place(x=100,y=140)
    
-but1=Button(frame,padx=5,pady=5,width=39,bg='white',fg='black',relief=GROOVE,command=open_cam,text='Open Cam ',font=('helvetica 15 bold'))
+
+but1=Button(frame,padx=5,pady=5,width=39,bg='white',fg='black',relief=GROOVE,command=open_cam,text='Open Droid web Cam & Stream',font=('helvetica 15 bold'))
 but1.place(x=5,y=176)
 
 but3=Button(frame,padx=5,pady=5,width=39,bg='white',fg='black',relief=GROOVE,command=stream_server,text='Open Droid web Cam & Stream',font=('helvetica 15 bold'))

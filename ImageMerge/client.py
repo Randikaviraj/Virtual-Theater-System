@@ -141,8 +141,8 @@ def stream_server():
          #cv2.imshow('My Video',cv2.resize(frame1, (600, 450)))
 
 
-         frame = imutils.resize(frame1, width=1250)
-         frame = cv2.flip(frame,180)
+         #frame = imutils.resize(frame1, width=1250)
+         frame = cv2.flip(frame1,180)
          result, image = cv2.imencode('.jpg', frame, encode_param)
          data = pickle.dumps(image, 0)
          size = len(data)

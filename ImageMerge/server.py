@@ -17,7 +17,9 @@ def algorithm(frames):
     if len(frames)==1:
         return frames[0]
     if len(frames)==2:
-        return frames[1]
+        #ff = np.where(frames[1] == 0, frames[2], frames[1])
+        fff = np.where(frames[1] == 0, frames[0], frames[1])
+        return fff
     if len(frames)==3:
         #return frames[1]
 
@@ -31,7 +33,7 @@ def algorithm(frames):
         fff = np.where(ff == 0, frames[0], ff)
         return fff
     else :
-	pass
+	    pass
         
     
 
@@ -52,7 +54,10 @@ def client_request_handling(client_request_socket_list):
 
 def theater_room(socket_list,client_request_socket_list):
     encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
-    bg = cv2.imread("bg.jpeg", cv2.IMREAD_COLOR)
+    #bg = cv2.imread("bg.jpeg", cv2.IMREAD_COLOR)
+    bg = cv2.imread("bg.jpeg")
+    bg = cv2.resize(bg, (600, 450))
+
     payload_size = struct.calcsize(">L")
     print("payload_size: {}".format(payload_size))
     while True:
@@ -90,7 +95,7 @@ def theater_room(socket_list,client_request_socket_list):
               
         lock.release()
         merged_frame=algorithm(frames=frames)
-        merged_frame = imutils.resize(merged_frame, width=1250)
+        merged_frame = imutils.resize(merged_frame, width=800)
         merged_frame = cv2.flip(merged_frame,180)
         result, image = cv2.imencode('.jpg', merged_frame, encode_param)
         data = pickle.dumps(image, 0)

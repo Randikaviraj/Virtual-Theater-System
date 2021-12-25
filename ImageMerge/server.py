@@ -11,7 +11,8 @@ HOST='127.0.0.1'
 PORT=8485
 lock=threading.Lock()
 clint_lock=threading.Lock()
-
+bg_lock=threading.Lock()
+back_ground=None
 
 def algorithm(frames):
     if len(frames)==1:
@@ -45,6 +46,7 @@ def client_request_handling(client_request_socket_list):
     
 
 def theater_room(socket_list,client_request_socket_list):
+    global back_ground
     encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
     #bg = cv2.imread("bg.jpeg", cv2.IMREAD_COLOR)
     bg = cv2.imread("bg.jpeg")
@@ -54,6 +56,10 @@ def theater_room(socket_list,client_request_socket_list):
     print("payload_size: {}".format(payload_size))
     while True:
         frames=[]
+        bg_lock.acquire()
+        if back_ground!=None:
+            bg=cv2.resize(back_ground, (600, 450))
+        bg_lock.release()
         frames.append(bg)
         lock.acquire()
         for i,(conn,data)  in enumerate(socket_list): 
@@ -126,17 +132,51 @@ def streamer_request_handling(socket_list):
         lock.acquire()
         socket_list.append((conn,b"" ))
         lock.release()
+        
+def background_request_handling(background):
+    global HOST
+    port=8486
+    s=socket.socket(socket.AF_INET,socket.SOCK_STREAM) 
+    s.bind((HOST,port))
+    payload_size = struct.calcsize(">L")
+    s.listen(10)
+    print('Stream Socket now listening')
+    while True:
+        data = b""
+        conn,addr=s.accept()
+        try:
+          while len(data) < payload_size:
+            chunk=conn.recv(4096)
+            if chunk == b'':
+                raise RuntimeError("socket connection broken")
+            data += chunk
+          packed_msg_size = data[:payload_size]
+          data = data[payload_size:]
+          msg_size = struct.unpack(">L", packed_msg_size)[0]
+          while len(data) < msg_size:
+                chunk=conn.recv(4096)
+                if chunk == b'':
+                    raise RuntimeError("socket connection broken")
+                data += chunk
+          frame_data = data[:msg_size]
+          frame=pickle.loads(frame_data, fix_imports=True, encoding="bytes")
+          frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
+          bg_lock.acquire()
+          back_ground=frame
+          bg_lock.release()
+        except:
+          print('An exception occurred in background updating')
+        
+        
+    
 
 
 socket_list=[]
 client_request_socket_list=[]
-
+threading.Thread(target=background_request_handling,args=(back_ground,)).start()
 threading.Thread(target=streamer_request_handling,args=(socket_list,)).start()
 threading.Thread(target=theater_room,args=(socket_list,client_request_socket_list,)).start()
 threading.Thread(target=client_request_handling,args=(client_request_socket_list,)).start()
-
-
-
 
 
 

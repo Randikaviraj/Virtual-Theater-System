@@ -13,7 +13,7 @@ import pickle
 import imutils
 
 
-
+HOST=''
 root=Tk()
 root.geometry('500x570')
 frame = Frame(root, relief=RIDGE, borderwidth=2)
@@ -25,6 +25,25 @@ label.pack(side=TOP)
 filename = PhotoImage(file="./demo.png")
 background_label = Label(frame,image=filename)
 background_label.pack(side=TOP)
+
+
+class popupWindow(object):
+    def __init__(self,master):
+        top=self.top=Toplevel(master)
+        self.l=Label(top,text="Enter Server IP")
+        self.l.pack()
+        self.e=Entry(top)
+        self.e.pack()
+        self.b=Button(top,text='Ok',command=self.cleanup)
+        self.b.pack()
+    def cleanup(self):
+        global HOST
+        HOST=self.e.get()
+        self.top.destroy()
+        
+def popup(master):
+   w=popupWindow(master) 
+   master.wait_window(w.top)
 
 
 
@@ -60,6 +79,8 @@ def exitt():
   
 def open_cam():
    global entry
+   global HOST
+   popup(root)
    cv2.namedWindow("Trackbars")
    cv2.resizeWindow("Trackbars",200,200)
 
@@ -76,7 +97,7 @@ def open_cam():
    
    try:
       
-      client_socket.connect(('127.0.0.1', 8485))
+      client_socket.connect((HOST, 8485))
       ip=entry.get()
       entry.select_clear()
       cam = cv2.VideoCapture('http://'+ip+':4747/video')
@@ -143,6 +164,9 @@ def nothing (args):
 def stream_server():
 
    global entry
+   global HOST
+   global root
+   popup(root)
 
    #image = cv2.imread("bg12.jpg")
     
@@ -161,7 +185,7 @@ def stream_server():
    cam=None
    try:
       
-      client_socket.connect(('127.0.0.1', 8485))
+      client_socket.connect((HOST, 8485))
       ip=entry.get()
       entry.select_clear()
       cam = cv2.VideoCapture(0)
@@ -233,9 +257,11 @@ def stream_server():
    
    
 def join_to_theater():
+   global HOST
+   popup(root)
    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
    try:
-      conn.connect(('127.0.0.1', 8080))
+      conn.connect((HOST, 8080))
 
       data = b""
       payload_size = struct.calcsize(">L")
@@ -286,6 +312,8 @@ def alert():
    alert.play()   
    
 def select_file():
+    global HOST
+    popup(root)
     encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
     filetypes = (
         ('jpeg files', '*.jpeg'),
@@ -299,7 +327,7 @@ def select_file():
     if len(file)!=0:
       try:
          client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-         client_socket.connect(('127.0.0.1', 8486))
+         client_socket.connect((HOST, 8486))
          bg=cv2.imread(file)
          frame = cv2.flip(bg,180)
          result, image = cv2.imencode('.jpg', frame, encode_param)
